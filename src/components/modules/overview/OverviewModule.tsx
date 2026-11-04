@@ -15,15 +15,33 @@ import {
   CheckCircle,
   Eye,
   Filter,
+  LayoutDashboard,
+  Network,
+  Users,
+  UserCheck,
+  BarChart3,
+  Search,
+  FileText,
+  ArrowRight,
 } from 'lucide-react';
 import { useAerovis } from '../../../context/AerovisContext';
+import { useAuth } from '../../../context/AuthContext';
 import { GisMap } from '../../map/GisMap';
 import { Badge } from '../../common/Badge';
 import { VideoStreamPlayer } from '../../common/VideoStreamPlayer';
 import { Modal } from '../../common/Modal';
 import { Camera as CameraType, Incident } from '../../../types/aerovis';
 
+const moduleAccent: Record<string, string> = {
+  blue: 'bg-blue-50 text-blue-600', cyan: 'bg-cyan-50 text-cyan-600',
+  indigo: 'bg-indigo-50 text-indigo-600', violet: 'bg-violet-50 text-violet-600',
+  sky: 'bg-sky-50 text-sky-600', purple: 'bg-purple-50 text-purple-600',
+  amber: 'bg-amber-50 text-amber-600', emerald: 'bg-emerald-50 text-emerald-600',
+  rose: 'bg-rose-50 text-rose-600', slate: 'bg-slate-100 text-slate-600', teal: 'bg-teal-50 text-teal-600',
+};
+
 export const OverviewModule: React.FC = () => {
+  const { canAccessModule } = useAuth();
   const {
     cameras,
     detections,
@@ -34,6 +52,7 @@ export const OverviewModule: React.FC = () => {
     setActiveModule,
     setSelectedCameraId,
     setSelectedIncidentId,
+    personRecords,
   } = useAerovis();
 
   const [inspectingCamera, setInspectingCamera] = useState<CameraType | null>(null);
@@ -49,6 +68,20 @@ export const OverviewModule: React.FC = () => {
   ).length;
   const criticalAlerts = alerts.filter((a) => a.type === 'CRITICAL' && !a.resolved).length;
   const busesOnline = buses.filter((b) => b.status === 'ACTIVE').length;
+  const modules = [
+    { id: 'overview', label: 'Overview', icon: LayoutDashboard, detail: 'City operations at a glance', count: null, color: 'blue' },
+    { id: 'live-monitoring', label: 'Live Monitoring', icon: Video, detail: 'Watch live camera feeds', count: activeCameras, color: 'cyan' },
+    { id: 'camera-network', label: 'Camera Network', icon: Network, detail: 'Manage connected cameras', count: totalCameras, color: 'indigo' },
+    { id: 'ai-detection', label: 'AI Detection', icon: Cpu, detail: 'Review real-time detections', count: activeDetectionsToday, color: 'violet' },
+    { id: 'vehicle-intelligence', label: 'Vehicle Intelligence', icon: Car, detail: 'Search vehicle activity', count: vehiclesToday, color: 'sky' },
+    { id: 'person-intelligence', label: 'Person Intelligence', icon: Users, detail: 'Review person of interest matches', count: personRecords.length, color: 'purple' },
+    { id: 'missing-persons', label: 'Missing Persons', icon: UserCheck, detail: 'Manage missing person cases', count: personRecords.filter((p) => p.isWatchlistMatch).length, color: 'amber' },
+    { id: 'traffic-analytics', label: 'Traffic Analytics', icon: BarChart3, detail: 'Explore traffic patterns', count: null, color: 'emerald' },
+    { id: 'incident-management', label: 'Incident Management', icon: AlertTriangle, detail: 'Track open incidents', count: activeIncidents, color: 'rose' },
+    { id: 'investigation-centre', label: 'Investigation Centre', icon: Search, detail: 'Build and review investigations', count: null, color: 'slate' },
+    { id: 'bus-network', label: 'Bus Camera Network', icon: Bus, detail: 'Monitor connected buses', count: busesOnline, color: 'blue' },
+    { id: 'reports', label: 'Reports', icon: FileText, detail: 'View and export reports', count: null, color: 'teal' },
+  ] as const;
 
   const handleCameraSelect = (cam: CameraType) => {
     setInspectingCamera(cam);
@@ -60,9 +93,46 @@ export const OverviewModule: React.FC = () => {
   };
 
   return (
-    <div className="h-full flex flex-col gap-3 overflow-hidden select-none">
+    <div className="h-full flex flex-col gap-4 overflow-y-auto pr-1">
+      <section className="shrink-0 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm md:p-5">
+        <div className="mb-4 flex flex-wrap items-end justify-between gap-2">
+          <div>
+            <p className="mb-1 text-[10px] font-bold uppercase tracking-[0.2em] text-blue-600">AEROVIS · OPERATIONS</p>
+            <h2 className="text-lg font-extrabold tracking-tight text-slate-900">Command Center</h2>
+            <p className="mt-0.5 text-xs text-slate-500">Choose a workspace to open its live operational view.</p>
+          </div>
+          <span className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-[10px] font-semibold text-slate-500">{modules.length} workspaces</span>
+        </div>
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-4">
+          {modules.map(({ id, label, icon: Icon, detail, count, color }) => {
+            const allowed = canAccessModule(id);
+            const selected = id === 'overview';
+            return (
+              <button
+                key={id}
+                type="button"
+                disabled={!allowed || selected}
+                onClick={() => setActiveModule(id)}
+                className={`group flex min-h-[76px] items-center gap-3 rounded-xl border p-3 text-left transition-all ${selected ? 'border-blue-200 bg-blue-50/80 ring-1 ring-blue-100' : allowed ? 'border-slate-200 bg-white hover:-translate-y-0.5 hover:border-blue-300 hover:shadow-md' : 'cursor-not-allowed border-slate-100 bg-slate-50 opacity-50'}`}
+              >
+                <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${selected ? 'bg-blue-600 text-white' : moduleAccent[color]}`}>
+                  <Icon className="h-[18px] w-[18px]" />
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="flex items-center justify-between gap-2">
+                    <span className="truncate text-xs font-bold text-slate-800">{label}</span>
+                    {count !== null && <span className={`rounded-md px-1.5 py-0.5 text-[10px] font-bold tabular-nums ${id === 'incident-management' ? 'bg-rose-100 text-rose-700' : 'bg-slate-100 text-slate-600'}`}>{count}</span>}
+                  </span>
+                  <span className="mt-1 block truncate text-[10px] text-slate-500">{detail}</span>
+                </span>
+                {!selected && <ArrowRight className="h-3.5 w-3.5 shrink-0 text-slate-300 transition group-hover:translate-x-0.5 group-hover:text-blue-600" />}
+              </button>
+            );
+          })}
+        </div>
+      </section>
       {/* Top Metric Cards Bar */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-2 shrink-0">
+      <div className="order-2 grid grid-cols-2 gap-2 shrink-0 sm:grid-cols-4 xl:grid-cols-8">
         <div className="bg-white p-2.5 rounded-xl border border-slate-200/90 shadow-2xs">
           <div className="flex items-center justify-between text-slate-500 mb-1">
             <span className="text-[10px] font-mono font-bold uppercase">Connected</span>
@@ -155,7 +225,7 @@ export const OverviewModule: React.FC = () => {
       </div>
 
       {/* Main Command Split: Left GIS Map (65%) | Right Live Feeds & Alert Center (35%) */}
-      <div className="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-3 min-h-0">
+      <div className="order-1 grid shrink-0 grid-cols-1 gap-3 min-h-[620px] lg:grid-cols-12">
         {/* Left: City GIS Map */}
         <div className="lg:col-span-8 bg-white rounded-xl border border-slate-200 overflow-hidden flex flex-col shadow-2xs">
           <div className="px-4 py-2.5 border-b border-slate-100 bg-slate-50/70 flex items-center justify-between">

@@ -9,7 +9,6 @@ import {
   ChevronDown,
   User as UserIcon,
   Shield,
-  Database,
   ExternalLink,
   Volume2,
   VolumeX,
@@ -27,7 +26,6 @@ export const TopNav: React.FC<{ onToggleMobileSidebar: () => void }> = ({
   const {
     cameras,
     alerts,
-    supabaseStatus,
     settings,
     updateSettings,
     setIsGlobalSearchOpen,
@@ -38,9 +36,6 @@ export const TopNav: React.FC<{ onToggleMobileSidebar: () => void }> = ({
     clearAllAlerts,
     setSelectedIncidentId,
     setActiveModule,
-    isLoading,
-    reloadData,
-    dataSource,
   } = useAerovis();
 
   const { currentUser, switchRole, logout, usersList, setIsAuthModalOpen } = useAuth();
@@ -125,28 +120,6 @@ export const TopNav: React.FC<{ onToggleMobileSidebar: () => void }> = ({
             ({Math.round((onlineCameras / totalCameras) * 100)}%)
           </span>
         </div>
-
-        {/* System Connection Status & Interactive Sync */}
-        <button
-          onClick={() => reloadData()}
-          disabled={isLoading}
-          className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-50 hover:bg-slate-100 border border-slate-200 text-xs cursor-pointer transition-colors"
-          title="Click to refresh & sync with Supabase PostgreSQL"
-        >
-          <Database
-            className={`w-3.5 h-3.5 ${
-              dataSource === 'supabase' ? 'text-emerald-600' : 'text-blue-600'
-            } ${isLoading ? 'animate-spin' : ''}`}
-          />
-          <div className="flex flex-col text-left">
-            <span className="text-[10px] text-slate-400 uppercase font-mono font-semibold leading-none">
-              Backend Link {isLoading ? '• Syncing' : ''}
-            </span>
-            <span className="text-[11px] font-medium text-slate-700 leading-tight">
-              {dataSource === 'supabase' ? 'Supabase Live' : 'Local State Engine'}
-            </span>
-          </div>
-        </button>
 
         {/* Live Date and Time */}
         <div className="hidden xl:flex flex-col text-right font-mono text-xs">

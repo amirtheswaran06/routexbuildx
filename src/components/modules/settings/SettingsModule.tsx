@@ -25,7 +25,6 @@ export const SettingsModule: React.FC = () => {
 
   const [formState, setFormState] = useState({
     supabaseUrl: settings.supabaseUrl || '',
-    supabaseAnonKey: settings.supabaseAnonKey || '',
     aiGatewayUrl: settings.aiGatewayUrl || '',
     refreshIntervalSec: settings.refreshIntervalSec || 5,
     enableSoundAlerts: settings.enableSoundAlerts,
@@ -144,7 +143,7 @@ export const SettingsModule: React.FC = () => {
                 <div>
                   <p className="font-semibold">{supabaseStatus.message}</p>
                   <p className="text-[11px] text-slate-500 mt-0.5">
-                    To connect: Supply your <span className="font-mono font-bold">VITE_SUPABASE_URL</span> and <span className="font-mono font-bold">VITE_SUPABASE_ANON_KEY</span> below or in <span className="font-mono font-bold">.env</span>.
+                    To connect: Set <span className="font-mono font-bold">VITE_SUPABASE_URL</span> and <span className="font-mono font-bold">VITE_SUPABASE_ANON_KEY</span> in your <span className="font-mono font-bold">.env</span> file.
                   </p>
                 </div>
               </div>
@@ -164,18 +163,6 @@ export const SettingsModule: React.FC = () => {
                 />
               </div>
 
-              <div>
-                <label className="block font-semibold text-slate-700 mb-1">
-                  Supabase Publishable / Anon Key (VITE_SUPABASE_ANON_KEY)
-                </label>
-                <input
-                  type="password"
-                  value={formState.supabaseAnonKey}
-                  onChange={(e) => setFormState({ ...formState, supabaseAnonKey: e.target.value })}
-                  placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6..."
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg font-mono text-slate-800 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                />
-              </div>
             </div>
 
             {/* Table Health Checklist (Visible after test) */}
@@ -224,7 +211,7 @@ export const SettingsModule: React.FC = () => {
                   Open your <a href="https://app.supabase.com" target="_blank" rel="noreferrer" className="text-blue-600 underline font-semibold">Supabase Dashboard</a> and select your project.
                 </li>
                 <li>
-                  Go to <strong>Project Settings ➔ API</strong>, copy your <strong>Project URL</strong> and <strong>anon / public Key</strong>, then paste them above and click <em>Save Platform Configuration</em>.
+                  Go to <strong>Project Settings ➔ API</strong>, then configure <strong>VITE_SUPABASE_URL</strong> and <strong>VITE_SUPABASE_ANON_KEY</strong> in your local <code>.env</code> file.
                 </li>
                 <li>
                   In Supabase, navigate to the <strong>SQL Editor</strong> tab on the left.
