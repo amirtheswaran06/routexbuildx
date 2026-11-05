@@ -105,6 +105,7 @@ interface AerovisContextType {
   updateMissingPersonStatus: (id: string, status: 'ACTIVE' | 'FOUND' | 'CLOSED') => Promise<void>;
 
   addDetection: (det: Detection) => Promise<void>;
+  generateDemoComplaint: () => Promise<void>;
 
   acknowledgeAlert: (id: string) => Promise<void>;
   resolveAlert: (id: string) => Promise<void>;
@@ -313,11 +314,11 @@ export const AerovisProvider: React.FC<{ children: React.ReactNode }> = ({ child
           let newLng = bus.currentLng + deltaLng;
           let newHeading = bus.heading;
 
-          if (newLat > 37.82 || newLat < 37.74) {
+          if (newLat > 13.16 || newLat < 12.88) {
             newHeading = (newHeading + 180) % 360;
             newLat = bus.currentLat;
           }
-          if (newLng > -122.38 || newLng < -122.43) {
+          if (newLng > 80.34 || newLng < 80.15) {
             newHeading = (newHeading + 180) % 360;
             newLng = bus.currentLng;
           }
@@ -519,6 +520,65 @@ export const AerovisProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }
   };
 
+  const generateDemoComplaint = async () => {
+    if (dataSource === 'supabase') return;
+    const demoCameras = cameras.filter((camera) => camera.code.startsWith('CAM-CHN-'));
+    if (demoCameras.length === 0) return;
+
+    const camera = demoCameras[Math.floor(Math.random() * demoCameras.length)];
+    const complaintKinds = [
+      { title: 'Blocked pedestrian crossing', category: 'ROAD_HAZARD' as const, priority: 'HIGH' as const },
+      { title: 'Traffic signal not responding', category: 'ROAD_HAZARD' as const, priority: 'MEDIUM' as const },
+      { title: 'Illegal parking near bus stop', category: 'TRAFFIC_VIOLATION' as const, priority: 'MEDIUM' as const },
+      { title: 'Road debris reported by resident', category: 'ROAD_HAZARD' as const, priority: 'HIGH' as const },
+      { title: 'Unsafe speeding near school zone', category: 'TRAFFIC_VIOLATION' as const, priority: 'HIGH' as const },
+      { title: 'Street light outage affecting visibility', category: 'ROAD_HAZARD' as const, priority: 'LOW' as const },
+    ];
+    const complaint = complaintKinds[Math.floor(Math.random() * complaintKinds.length)];
+    const now = new Date();
+    const timestamp = now.toISOString().replace('T', ' ').substring(0, 19);
+    const eventId = Date.now();
+    const latitude = camera.latitude + (Math.random() - 0.5) * 0.0012;
+    const longitude = camera.longitude + (Math.random() - 0.5) * 0.0012;
+
+    await addIncident({
+      title: `Public complaint: ${complaint.title}`,
+      category: complaint.category,
+      priority: complaint.priority,
+      status: 'NEW',
+      locationName: camera.locationName,
+      latitude,
+      longitude,
+      timestamp,
+      cameraId: camera.id,
+      cameraCode: camera.code,
+      description: `A resident complaint was received and queued for operator review. The report was correlated with ${camera.name}.`,
+      assignedOfficer: 'Unassigned',
+    });
+
+    await addDetection({
+      id: `det-demo-${eventId}`,
+      timestamp,
+      cameraId: camera.id,
+      cameraCode: camera.code,
+      cameraName: camera.name,
+      category: 'ROAD_HAZARD',
+      confidence: Number((0.78 + Math.random() * 0.2).toFixed(3)),
+      label: `Complaint triage: ${complaint.title}`,
+      bbox: [34, 28, 32, 40],
+      metadata: { source: 'DEMO_COMPLAINT', locationName: camera.locationName },
+      isDemo: true,
+    });
+  };
+
+  useEffect(() => {
+    if (!settings.demoSimulationActive || dataSource === 'supabase') return;
+    const timer = window.setInterval(() => {
+      void generateDemoComplaint();
+    }, 60_000);
+    return () => window.clearInterval(timer);
+  }, [settings.demoSimulationActive, dataSource]);
+
   const acknowledgeAlert = async (id: string) => {
     await alertsService.acknowledge(id);
     setAlerts((prev) => prev.map((alt) => (alt.id === id ? { ...alt, acknowledged: true } : alt)));
@@ -596,6 +656,7 @@ export const AerovisProvider: React.FC<{ children: React.ReactNode }> = ({ child
         addMissingPerson,
         updateMissingPersonStatus,
         addDetection,
+        generateDemoComplaint,
         acknowledgeAlert,
         resolveAlert,
         clearAllAlerts,
@@ -616,3 +677,4 @@ export const useAerovis = () => {
   }
   return context;
 };
+

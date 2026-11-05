@@ -15,6 +15,21 @@ import {
   User,
 } from '../types/aerovis';
 
+const CHENNAI_CAMERA_SITES = [
+  { name: 'Chennai Central Elevated Junction', place: 'Chennai Central', zone: 'Central Chennai', latitude: 13.0827, longitude: 80.2707 },
+  { name: 'T Nagar Elevated Camera', place: 'T Nagar Bus Terminus', zone: 'T Nagar', latitude: 13.0418, longitude: 80.2341 },
+  { name: 'Adyar Elevated Camera', place: 'Adyar Junction', zone: 'Adyar', latitude: 13.0067, longitude: 80.2575 },
+  { name: 'Guindy Elevated Traffic Camera', place: 'Guindy Kathipara', zone: 'Guindy', latitude: 13.0067, longitude: 80.2206 },
+  { name: 'Velachery Elevated Camera', place: 'Velachery Main Road', zone: 'Velachery', latitude: 12.975, longitude: 80.2212 },
+  { name: 'Anna Nagar Elevated Camera', place: 'Anna Nagar Tower Park', zone: 'Anna Nagar', latitude: 13.085, longitude: 80.2101 },
+  { name: 'Egmore Elevated Junction Camera', place: 'Egmore Railway Station', zone: 'Egmore', latitude: 13.0732, longitude: 80.2609 },
+  { name: 'Marina Elevated Coastal Camera', place: 'Marina Beach Road', zone: 'Marina', latitude: 13.0499, longitude: 80.2824 },
+  { name: 'Koyambedu Elevated Camera', place: 'Koyambedu Bus Terminus', zone: 'Koyambedu', latitude: 13.0694, longitude: 80.1948 },
+  { name: 'Perambur Elevated Camera', place: 'Perambur Station Road', zone: 'Perambur', latitude: 13.1157, longitude: 80.2337 },
+  { name: 'Sholinganallur Elevated Camera', place: 'OMR Sholinganallur Junction', zone: 'OMR South', latitude: 12.901, longitude: 80.2279 },
+  { name: 'OMR Elevated Corridor Camera', place: 'Old Mahabalipuram Road', zone: 'OMR South', latitude: 12.9562, longitude: 80.2482 },
+] as const;
+
 // Initial realistic data seed
 export const INITIAL_CAMERAS: Camera[] = [
   {
@@ -247,6 +262,25 @@ export const INITIAL_CAMERAS: Camera[] = [
     lastPing: '2s ago',
     isDemo: false,
   },
+  ...CHENNAI_CAMERA_SITES.map((site, index): Camera => ({
+    id: `cam-chn-${String(index + 1).padStart(2, '0')}`,
+    code: `CAM-CHN-${String(index + 1).padStart(3, '0')}`,
+    name: site.name,
+    type: index % 3 === 0 ? 'TRAFFIC' : index % 3 === 1 ? 'ANPR' : 'CCTV',
+    locationName: site.place,
+    zone: site.zone,
+    latitude: site.latitude,
+    longitude: site.longitude,
+    ipAddress: `10.241.${Math.floor(index / 250)}.${(index % 250) + 1}`,
+    streamUrl: 'https://images.unsplash.com/photo-1477959858617-67f30bc75b82?auto=format&fit=crop&w=1200&q=80',
+    status: index % 7 === 0 ? 'DEGRADED' : 'ONLINE',
+    resolution: '4K (3840x2160)',
+    fps: 30,
+    coverageAngle: 110,
+    direction: ['North', 'North-East', 'East', 'South-East', 'South', 'West'][index % 6],
+    lastPing: 'Just now',
+    isDemo: true,
+  })),
 ];
 
 export const INITIAL_BUSES: Bus[] = [
@@ -1003,14 +1037,75 @@ export const DEFAULT_SETTINGS: SystemSettings = {
 };
 
 // Storage helper functions
+const CHENNAI_CENTER: [number, number] = [13.0827, 80.2707];
+const DEMO_CITY_ORIGIN: [number, number] = [37.78, -122.41];
+const DEMO_COORDINATE_FIELDS: Record<string, [string, string]> = {
+  cameras: ['latitude', 'longitude'],
+  buses: ['currentLat', 'currentLng'],
+  incidents: ['latitude', 'longitude'],
+  vehicle_records: ['latitude', 'longitude'],
+  person_records: ['latitude', 'longitude'],
+};
+
+const moveDemoLocationsToChennai = <T,>(key: string, value: T): { value: T; changed: boolean } => {
+  const coordinateFields = DEMO_COORDINATE_FIELDS[key];
+  if (!coordinateFields || !Array.isArray(value)) return { value, changed: false };
+
+  const [latitudeField, longitudeField] = coordinateFields;
+  const latitudeScale = 1;
+  const longitudeScale = Math.cos((DEMO_CITY_ORIGIN[0] * Math.PI) / 180) /
+    Math.cos((CHENNAI_CENTER[0] * Math.PI) / 180);
+  let changed = false;
+
+  const moved = value.map((record) => {
+    if (!record || typeof record !== 'object') return record;
+    const latitude = (record as Record<string, unknown>)[latitudeField];
+    const longitude = (record as Record<string, unknown>)[longitudeField];
+    if (typeof latitude !== 'number' || typeof longitude !== 'number' ||
+      latitude < 37.7 || latitude > 37.84 || longitude < -122.53 || longitude > -122.35) {
+      return record;
+    }
+
+    changed = true;
+    return {
+      ...record,
+      [latitudeField]: CHENNAI_CENTER[0] + (latitude - DEMO_CITY_ORIGIN[0]) * latitudeScale,
+      [longitudeField]: CHENNAI_CENTER[1] + (longitude - DEMO_CITY_ORIGIN[1]) * longitudeScale,
+    };
+  }) as T;
+
+  return { value: moved, changed };
+};
+
 export const getStoredData = <T>(key: string, defaultValue: T): T => {
   try {
     const raw = localStorage.getItem(`aerovis_${key}`);
-    if (raw) return JSON.parse(raw);
+    if (raw) {
+      const stored = JSON.parse(raw) as T;
+      const migrated = moveDemoLocationsToChennai(key, stored);
+      const seeded = mergeNewCameraDemoSeeds(key, migrated.value, defaultValue);
+      if (migrated.changed || seeded.changed) setStoredData(key, seeded.value);
+      return seeded.value;
+    }
   } catch (err) {
     console.warn(`Error reading ${key} from storage:`, err);
   }
-  return defaultValue;
+  return moveDemoLocationsToChennai(key, defaultValue).value;
+};
+
+const mergeNewCameraDemoSeeds = <T,>(key: string, storedValue: T, defaultValue: T): { value: T; changed: boolean } => {
+  if (key !== 'cameras' || !Array.isArray(storedValue) || !Array.isArray(defaultValue) || storedValue.length === 0) {
+    return { value: storedValue, changed: false };
+  }
+
+  const seedIds = new Set(defaultValue.map((camera) => camera.id));
+  const isKnownDemoSet = storedValue.some((camera) => camera.id === 'cam-01') &&
+    storedValue.every((camera) => seedIds.has(camera.id));
+  if (!isKnownDemoSet) return { value: storedValue, changed: false };
+
+  const storedById = new Map(storedValue.map((camera) => [camera.id, camera]));
+  const merged = defaultValue.map((camera) => storedById.get(camera.id) ?? camera);
+  return { value: merged as T, changed: merged.length !== storedValue.length };
 };
 
 export const setStoredData = <T>(key: string, value: T): void => {
@@ -1020,3 +1115,4 @@ export const setStoredData = <T>(key: string, value: T): void => {
     console.error(`Error saving ${key} to storage:`, err);
   }
 };
+

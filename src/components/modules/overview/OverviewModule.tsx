@@ -23,6 +23,7 @@ import {
   Search,
   FileText,
   ArrowRight,
+  MessageSquarePlus,
 } from 'lucide-react';
 import { useAerovis } from '../../../context/AerovisContext';
 import { useAuth } from '../../../context/AuthContext';
@@ -53,9 +54,21 @@ export const OverviewModule: React.FC = () => {
     setSelectedCameraId,
     setSelectedIncidentId,
     personRecords,
+    generateDemoComplaint,
+    dataSource,
   } = useAerovis();
 
   const [inspectingCamera, setInspectingCamera] = useState<CameraType | null>(null);
+  const [isGeneratingComplaint, setIsGeneratingComplaint] = useState(false);
+
+  const handleGenerateComplaint = async () => {
+    setIsGeneratingComplaint(true);
+    try {
+      await generateDemoComplaint();
+    } finally {
+      setIsGeneratingComplaint(false);
+    }
+  };
 
   // Key KPI stats derived dynamically from backend records
   const totalCameras = cameras.length;
@@ -101,7 +114,21 @@ export const OverviewModule: React.FC = () => {
             <h2 className="text-lg font-extrabold tracking-tight text-slate-900">Command Center</h2>
             <p className="mt-0.5 text-xs text-slate-500">Choose a workspace to open its live operational view.</p>
           </div>
-          <span className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-[10px] font-semibold text-slate-500">{modules.length} workspaces</span>
+          <div className="flex items-center gap-2">
+            <span className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-[10px] font-semibold text-slate-500">{modules.length} workspaces</span>
+            {canAccessModule('incident-management') && (
+              <button
+                type="button"
+                onClick={handleGenerateComplaint}
+                disabled={isGeneratingComplaint || dataSource === 'supabase'}
+                title={dataSource === 'supabase' ? 'Demo generation is paused while live data is connected' : 'Create a demo public complaint with a linked alert and AI detection'}
+                className="flex items-center gap-1.5 rounded-lg bg-blue-600 px-3 py-2 text-[11px] font-semibold text-white shadow-sm transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                <MessageSquarePlus className="h-3.5 w-3.5" />
+                {isGeneratingComplaint ? 'Generating…' : 'Generate complaint'}
+              </button>
+            )}
+          </div>
         </div>
         <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-4">
           {modules.map(({ id, label, icon: Icon, detail, count, color }) => {
@@ -393,3 +420,4 @@ export const OverviewModule: React.FC = () => {
     </div>
   );
 };
+

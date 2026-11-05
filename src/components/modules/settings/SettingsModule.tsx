@@ -273,10 +273,10 @@ export const SettingsModule: React.FC = () => {
                 />
                 <div>
                   <span className="font-bold text-slate-800 block">
-                    Dynamic Bus GPS Simulation Ticker
+                    Demo Activity Generator
                   </span>
                   <p className="text-[11px] text-slate-500 mt-0.5">
-                    Smoothly animates bus platforms along real municipal routes and syncs telemetry to Supabase.
+                    Moves demo buses and generates a sample Chennai complaint, linked alert, and AI detection every minute. Automatic event generation pauses when live Supabase data is active.
                   </p>
                 </div>
               </label>
@@ -340,3 +340,4 @@ export const SettingsModule: React.FC = () => {
     </div>
   );
 };
+

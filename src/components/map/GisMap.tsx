@@ -5,7 +5,8 @@ import {
   Marker,
   Popup,
   Polyline,
-  Circle,
+  ZoomControl,
+  CircleMarker,
   useMap,
 } from 'react-leaflet';
 import L from 'leaflet';
@@ -22,13 +23,7 @@ import {
   Video,
   AlertTriangle,
   Bus as BusIcon,
-  Navigation,
-  Car,
-  Layers,
-  Eye,
-  Maximize2,
-  Compass,
-  Radio,
+  LocateFixed,
 } from 'lucide-react';
 
 interface GisMapProps {
@@ -48,83 +43,106 @@ interface GisMapProps {
 // Custom DivIcons for crisp vector rendering
 const createCameraIcon = (type: CameraType, status: string, isSelected: boolean) => {
   const isOnline = status === 'ONLINE';
-  const isDegraded = status === 'DEGRADED';
-  const bgColor = isOnline
-    ? isSelected
-      ? 'bg-blue-600 ring-4 ring-blue-300'
-      : 'bg-slate-900 border-2 border-blue-400'
-    : isDegraded
-    ? 'bg-amber-600 border-2 border-amber-300'
-    : 'bg-rose-600 border-2 border-rose-300';
-
   const typeLetter = type === 'ANPR' ? 'A' : type === 'TRAFFIC' ? 'T' : type === 'BUS' ? 'B' : 'C';
 
   return L.divIcon({
-    className: 'custom-leaflet-icon',
+    className: 'aerovis-marker-icon',
     html: `
-      <div class="relative flex items-center justify-center w-7 h-7 rounded-full ${bgColor} text-white shadow-md cursor-pointer transition-transform hover:scale-125">
-        <span class="text-[10px] font-mono font-bold">${typeLetter}</span>
-        ${isOnline ? '<span class="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-emerald-400 ring-1 ring-white"></span>' : ''}
+      <div class="aerovis-marker aerovis-camera-marker ${isOnline ? 'is-online' : status === 'DEGRADED' ? 'is-degraded' : 'is-offline'} ${isSelected ? 'is-selected' : ''}">
+        <span>${typeLetter}</span>${isOnline ? '<i></i>' : ''}
       </div>
     `,
-    iconSize: [28, 28],
-    iconAnchor: [14, 14],
+    iconSize: [36, 42],
+    iconAnchor: [18, 21],
   });
 };
 
 const createBusIcon = (heading: number) => {
   return L.divIcon({
-    className: 'custom-bus-icon',
+    className: 'aerovis-bus-icon',
     html: `
-      <div class="relative flex items-center justify-center w-8 h-8 rounded-full bg-indigo-600 text-white shadow-lg cursor-pointer border-2 border-white transition-transform hover:scale-125">
-        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M8 6v6"/>
-          <path d="M15 6v6"/>
-          <path d="M2 12h19.6"/>
-          <path d="M18 18h3s.5-1.7.8-2.8c.1-.4.2-.8.2-1.2 0-.4-.1-.8-.2-1.2l-1.4-5C18.2 6.7 17.1 6 16 6H4c-1.1 0-2.2.7-2.4 1.8l-1.4 5c-.1.4-.2.8-.2 1.2 0 .4.1.8.2 1.2.3 1.1.8 2.8.8 2.8h3"/>
-          <circle cx="7" cy="18" r="2"/>
-          <circle cx="15" cy="18" r="2"/>
-        </svg>
-        <div class="absolute -bottom-1 -right-1 w-3.5 h-3.5 bg-indigo-900 rounded-full flex items-center justify-center border border-white" style="transform: rotate(${heading}deg);">
-          <div class="w-0 h-0 border-l-[3px] border-l-transparent border-r-[3px] border-r-transparent border-b-[5px] border-b-white"></div>
-        </div>
+      <div class="aerovis-marker aerovis-bus-marker" style="--bus-heading:${heading}deg">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5.5A2.5 2.5 0 0 1 7.5 3h9A2.5 2.5 0 0 1 19 5.5v12a1.5 1.5 0 0 1-1.5 1.5h-11A1.5 1.5 0 0 1 5 17.5z"/><path d="M6 9h12M8 15h.01M16 15h.01M7 19v2m10-2v2"/></svg>
+        <i></i>
       </div>
     `,
-    iconSize: [32, 32],
-    iconAnchor: [16, 16],
+    iconSize: [38, 42],
+    iconAnchor: [19, 21],
   });
 };
 
 const createIncidentIcon = (priority: IncidentPriority, isSelected: boolean) => {
   const isCritical = priority === 'CRITICAL';
   const isHigh = priority === 'HIGH';
-  const color = isCritical ? 'bg-rose-600' : isHigh ? 'bg-amber-600' : 'bg-blue-600';
+  const color = isCritical ? 'is-critical' : isHigh ? 'is-high' : 'is-normal';
 
   return L.divIcon({
-    className: 'custom-incident-icon',
+    className: 'aerovis-marker-icon',
     html: `
-      <div class="relative flex items-center justify-center w-8 h-8 rounded-full ${color} text-white shadow-lg cursor-pointer border-2 border-white ${
-        isSelected ? 'ring-4 ring-rose-300 scale-125' : ''
+      <div class="aerovis-marker aerovis-incident-marker ${color} ${
+        isSelected ? 'is-selected' : ''
       } ${isCritical ? 'radar-ping' : ''}">
-        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
           <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/>
           <line x1="12" y1="9" x2="12" y2="13"/>
           <line x1="12" y1="17" x2="12.01" y2="17"/>
         </svg>
       </div>
     `,
-    iconSize: [32, 32],
-    iconAnchor: [16, 16],
+    iconSize: [38, 42],
+    iconAnchor: [19, 21],
   });
 };
 
-// Component to dynamically fit bounds or re-center
-const MapViewController: React.FC<{ center: [number, number]; zoom: number }> = ({ center, zoom }) => {
+const isValidCoordinate = (latitude: number, longitude: number) =>
+  Number.isFinite(latitude) && Number.isFinite(longitude) &&
+  latitude >= -90 && latitude <= 90 && longitude >= -180 && longitude <= 180;
+
+const MapViewport: React.FC<{ points: [number, number][]; center: [number, number]; zoom: number }> = ({ points, center, zoom }) => {
   const map = useMap();
+  const pointsKey = points.map(([lat, lng]) => `${lat},${lng}`).join(';');
+
   React.useEffect(() => {
-    map.setView(center, zoom);
-  }, [center, zoom, map]);
+    const fitMap = () => {
+      map.invalidateSize({ pan: false });
+      if (points.length > 0) {
+        map.fitBounds(L.latLngBounds(points), { padding: [42, 42], maxZoom: 15 });
+      } else {
+        map.setView(center, zoom);
+      }
+    };
+
+    const frame = window.requestAnimationFrame(fitMap);
+    const observer = typeof ResizeObserver === 'undefined'
+      ? undefined
+      : new ResizeObserver(() => map.invalidateSize({ pan: false }));
+    if (observer) observer.observe(map.getContainer());
+
+    return () => {
+      window.cancelAnimationFrame(frame);
+      observer?.disconnect();
+    };
+  }, [map, pointsKey, center[0], center[1], zoom]);
   return null;
+};
+
+const UserLocationMarker: React.FC<{ location: [number, number] | null }> = ({ location }) => {
+  const map = useMap();
+
+  React.useEffect(() => {
+    if (location) map.flyTo(location, Math.max(map.getZoom(), 15), { duration: 0.8 });
+  }, [location, map]);
+
+  if (!location) return null;
+  return (
+    <CircleMarker
+      center={location}
+      radius={9}
+      pathOptions={{ color: '#ffffff', weight: 3, fillColor: '#2563eb', fillOpacity: 1 }}
+    >
+      <Popup>You are here</Popup>
+    </CircleMarker>
+  );
 };
 
 export const GisMap: React.FC<GisMapProps> = ({
@@ -138,112 +156,75 @@ export const GisMap: React.FC<GisMapProps> = ({
   selectedIncidentId,
   height = '100%',
   zoom = 13,
-  center = [37.782, -122.408],
+  center = [13.0827, 80.2707],
 }) => {
   // Layer toggles
   const [layers, setLayers] = useState({
     cameras: true,
     buses: true,
     incidents: true,
-    trafficDensity: true,
-    coverageCones: false,
   });
+  const [userLocation, setUserLocation] = useState<[number, number] | null>(null);
+  const [isLocating, setIsLocating] = useState(false);
+  const [locationError, setLocationError] = useState('');
 
-  // Selected camera preview modal inside map
-  const [activePopupCamera, setActivePopupCamera] = useState<Camera | null>(null);
-
-  // Metro Bus routes coordinates for polylines
-  const busRouteCoords: [number, number][] = [
-    [37.7895, -122.4024],
-    [37.7858, -122.4065],
-    [37.7842, -122.4078],
-    [37.7785, -122.4172],
-    [37.7684, -122.3912],
-    [37.7512, -122.4045],
+  const validCameras = cameras.filter((camera) => isValidCoordinate(camera.latitude, camera.longitude));
+  const validBuses = buses.filter((bus) => isValidCoordinate(bus.currentLat, bus.currentLng));
+  const validIncidents = incidents.filter((incident) => isValidCoordinate(incident.latitude, incident.longitude));
+  const validTrack = activeVehicleTrack.filter((vehicle) => isValidCoordinate(vehicle.latitude, vehicle.longitude));
+  const mapPoints: [number, number][] = [
+    ...validCameras.map((camera) => [camera.latitude, camera.longitude] as [number, number]),
+    ...validIncidents.map((incident) => [incident.latitude, incident.longitude] as [number, number]),
   ];
+  const mapCenter = center;
 
-  // Highway corridor track
-  const highwayCoords: [number, number][] = [
-    [37.8087, -122.4098],
-    [37.7876, -122.3921],
-    [37.7621, -122.3887],
-    [37.7512, -122.4045],
-    [37.7380, -122.4010],
-  ];
+  const locateMe = () => {
+    if (!navigator.geolocation) {
+      setLocationError('Location is not available in this browser.');
+      return;
+    }
+
+    setIsLocating(true);
+    setLocationError('');
+    navigator.geolocation.getCurrentPosition(
+      ({ coords }) => {
+        setUserLocation([coords.latitude, coords.longitude]);
+        setIsLocating(false);
+      },
+      (error) => {
+        setLocationError(error.code === error.PERMISSION_DENIED
+          ? 'Allow location access in your browser to center the map.'
+          : 'Could not get your location. Try again.');
+        setIsLocating(false);
+      },
+      { enableHighAccuracy: true, timeout: 15000, maximumAge: 60000 },
+    );
+  };
 
   return (
     <div className="relative w-full h-full bg-slate-100 overflow-hidden rounded-xl border border-slate-200">
       <MapContainer
-        center={center}
+        center={mapCenter}
         zoom={zoom}
         style={{ width: '100%', height }}
         zoomControl={false}
+        scrollWheelZoom
       >
-        <MapViewController center={center} zoom={zoom} />
+        <MapViewport points={mapPoints} center={mapCenter} zoom={zoom} />
+        <UserLocationMarker location={userLocation} />
+        <ZoomControl position="bottomright" />
 
-        {/* Crisp Positron / OpenStreetMap Clean Tiles */}
+        {/* OpenStreetMap tiles render without a provider API key. */}
         <TileLayer
-          attribution='&copy; <a href="https://carto.com/">CARTO</a> Positron'
-          url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
+          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
           maxZoom={19}
         />
 
-        {/* Traffic Density Overlays (Heatmap / Corridors) */}
-        {layers.trafficDensity && (
-          <>
-            {/* Downtown Density Core */}
-            <Circle
-              center={[37.7858, -122.4065]}
-              radius={700}
-              pathOptions={{
-                color: '#ef4444',
-                fillColor: '#ef4444',
-                fillOpacity: 0.12,
-                weight: 1.5,
-                dashArray: '4, 4',
-              }}
-            />
-            {/* Tech Corridor Moderate Zone */}
-            <Circle
-              center={[37.7684, -122.3912]}
-              radius={550}
-              pathOptions={{
-                color: '#3b82f6',
-                fillColor: '#3b82f6',
-                fillOpacity: 0.08,
-                weight: 1.5,
-              }}
-            />
-            {/* Highway Corridor Line */}
-            <Polyline
-              positions={highwayCoords}
-              pathOptions={{
-                color: '#f59e0b',
-                weight: 4,
-                opacity: 0.65,
-                lineCap: 'round',
-              }}
-            />
-          </>
-        )}
-
-        {/* Bus Routes Polyline */}
-        {layers.buses && (
-          <Polyline
-            positions={busRouteCoords}
-            pathOptions={{
-              color: '#6366f1',
-              weight: 3,
-              opacity: 0.7,
-              dashArray: '6, 8',
-            }}
-          />
-        )}
-
         {/* Vehicle Movement Track (If active search/correlation) */}
-        {activeVehicleTrack && activeVehicleTrack.length > 1 && (
+        {validTrack.length > 1 && (
           <Polyline
-            positions={activeVehicleTrack.map((v) => [v.latitude, v.longitude] as [number, number])}
+            positions={validTrack.map((v) => [v.latitude, v.longitude] as [number, number])}
             pathOptions={{
               color: '#dc2626',
               weight: 4,
@@ -254,7 +235,7 @@ export const GisMap: React.FC<GisMapProps> = ({
 
         {/* Camera Markers */}
         {layers.cameras &&
-          cameras.map((cam) => {
+          validCameras.map((cam) => {
             const isSelected = cam.id === selectedCameraId;
             return (
               <Marker
@@ -263,7 +244,6 @@ export const GisMap: React.FC<GisMapProps> = ({
                 icon={createCameraIcon(cam.type, cam.status, isSelected)}
                 eventHandlers={{
                   click: () => {
-                    setActivePopupCamera(cam);
                     if (onSelectCamera) onSelectCamera(cam);
                   },
                 }}
@@ -316,7 +296,7 @@ export const GisMap: React.FC<GisMapProps> = ({
 
         {/* Bus Markers */}
         {layers.buses &&
-          buses.map((bus) => (
+          validBuses.map((bus) => (
             <Marker
               key={bus.id}
               position={[bus.currentLat, bus.currentLng]}
@@ -349,7 +329,7 @@ export const GisMap: React.FC<GisMapProps> = ({
 
         {/* Incident Markers */}
         {layers.incidents &&
-          incidents.map((inc) => {
+          validIncidents.map((inc) => {
             const isSelected = inc.id === selectedIncidentId;
             return (
               <Marker
@@ -396,6 +376,24 @@ export const GisMap: React.FC<GisMapProps> = ({
           })}
       </MapContainer>
 
+      <div className="absolute left-3 top-3 z-[1000] flex max-w-[calc(100%-1.5rem)] flex-col items-start gap-1">
+        <button
+          type="button"
+          onClick={locateMe}
+          disabled={isLocating}
+          className="flex items-center gap-2 rounded-lg border border-slate-200 bg-white/95 px-3 py-2 text-xs font-semibold text-slate-700 shadow-md backdrop-blur transition hover:bg-white disabled:cursor-wait disabled:opacity-70"
+          aria-label="Center map on my location"
+        >
+          <LocateFixed className={`h-4 w-4 text-blue-600 ${isLocating ? 'animate-pulse' : ''}`} />
+          {isLocating ? 'Locating…' : userLocation ? 'Update my location' : 'My location'}
+        </button>
+        {locationError && (
+          <p role="status" className="max-w-64 rounded-md border border-amber-200 bg-white/95 px-2.5 py-1.5 text-[11px] text-amber-800 shadow">
+            {locationError}
+          </p>
+        )}
+      </div>
+
       {/* Floating GIS Map Controls Bar */}
       <div className="absolute top-3 right-3 z-400 bg-white/95 backdrop-blur-md rounded-lg shadow-md border border-slate-200/80 p-2 flex items-center gap-1.5 text-xs text-slate-700 select-none">
         <span className="text-[10px] uppercase font-bold text-slate-400 font-mono px-1">Layers:</span>
@@ -409,7 +407,7 @@ export const GisMap: React.FC<GisMapProps> = ({
           }`}
         >
           <Video className="w-3.5 h-3.5" />
-          <span>Cameras ({cameras.length})</span>
+          <span>Cameras ({validCameras.length})</span>
         </button>
 
         <button
@@ -421,7 +419,7 @@ export const GisMap: React.FC<GisMapProps> = ({
           }`}
         >
           <BusIcon className="w-3.5 h-3.5" />
-          <span>Buses ({buses.length})</span>
+          <span>Buses ({validBuses.length})</span>
         </button>
 
         <button
@@ -433,19 +431,7 @@ export const GisMap: React.FC<GisMapProps> = ({
           }`}
         >
           <AlertTriangle className="w-3.5 h-3.5" />
-          <span>Incidents ({incidents.filter((i) => i.status !== 'CLOSED').length})</span>
-        </button>
-
-        <button
-          onClick={() => setLayers((l) => ({ ...l, trafficDensity: !l.trafficDensity }))}
-          className={`px-2 py-1 rounded font-medium cursor-pointer transition-colors flex items-center gap-1 ${
-            layers.trafficDensity
-              ? 'bg-amber-50 text-amber-700 border border-amber-200'
-              : 'hover:bg-slate-100 text-slate-500'
-          }`}
-        >
-          <Layers className="w-3.5 h-3.5" />
-          <span>Traffic Heatmap</span>
+          <span>Incidents ({validIncidents.filter((i) => i.status !== 'CLOSED').length})</span>
         </button>
       </div>
 
@@ -474,3 +460,4 @@ export const GisMap: React.FC<GisMapProps> = ({
     </div>
   );
 };
+

@@ -52,6 +52,152 @@
   font-family: inherit;
 }
 
+.aerovis-marker-icon {
+  background: transparent;
+  border: 0;
+}
+
+.aerovis-marker {
+  position: relative;
+  display: flex;
+  width: 36px;
+  height: 36px;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid #fff;
+  border-radius: 50%;
+  color: #fff;
+  box-shadow: 0 2px 8px rgb(15 23 42 / 35%);
+  transition: transform 120ms ease, box-shadow 120ms ease;
+}
+
+.aerovis-marker:hover {
+  transform: scale(1.12);
+  box-shadow: 0 4px 12px rgb(15 23 42 / 45%);
+}
+
+.aerovis-camera-marker {
+  z-index: 1;
+  background: #0f172a;
+  border-color: #60a5fa;
+  font: 700 12px 'JetBrains Mono', monospace;
+}
+
+.aerovis-camera-marker::before {
+  position: absolute;
+  z-index: -2;
+  inset: -5px;
+  border: 2px solid rgb(59 130 246 / 65%);
+  border-radius: 50%;
+  content: '';
+  animation: camera-beacon 2.4s ease-out infinite;
+}
+
+.aerovis-camera-marker::after {
+  position: absolute;
+  z-index: -1;
+  bottom: -5px;
+  left: 50%;
+  width: 10px;
+  height: 10px;
+  border-right: 2px solid #60a5fa;
+  border-bottom: 2px solid #60a5fa;
+  background: inherit;
+  content: '';
+  transform: translateX(-50%) rotate(45deg);
+}
+
+.aerovis-camera-marker.is-degraded {
+  background: #d97706;
+  border-color: #fde68a;
+}
+
+.aerovis-camera-marker.is-offline {
+  background: #e11d48;
+  border-color: #fecdd3;
+}
+
+.aerovis-camera-marker.is-selected {
+  background: #2563eb;
+  box-shadow: 0 0 0 4px rgb(96 165 250 / 40%), 0 2px 8px rgb(15 23 42 / 35%);
+}
+
+.aerovis-camera-marker i {
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  width: 9px;
+  height: 9px;
+  border: 1px solid #fff;
+  border-radius: 50%;
+  background: #34d399;
+}
+
+.aerovis-bus-marker {
+  background: #4f46e5;
+}
+
+.aerovis-bus-icon {
+  background: transparent;
+  border: 0;
+  transition: transform 3.8s linear;
+  will-change: transform;
+}
+
+.aerovis-bus-marker svg {
+  width: 20px;
+  height: 20px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.aerovis-bus-marker i {
+  position: absolute;
+  right: -5px;
+  bottom: -4px;
+  width: 0;
+  height: 0;
+  border-right: 5px solid transparent;
+  border-bottom: 9px solid #312e81;
+  border-left: 5px solid transparent;
+  transform: rotate(var(--bus-heading));
+  transform-origin: center 7px;
+}
+
+.aerovis-incident-marker {
+  background: #2563eb;
+}
+
+.aerovis-incident-marker.is-critical {
+  background: #e11d48;
+}
+
+.aerovis-incident-marker.is-high {
+  background: #d97706;
+}
+
+.aerovis-incident-marker.is-selected {
+  box-shadow: 0 0 0 4px rgb(251 113 133 / 45%), 0 2px 8px rgb(15 23 42 / 35%);
+  transform: scale(1.12);
+}
+
+.aerovis-incident-marker svg {
+  width: 18px;
+  height: 18px;
+}
+
+.leaflet-control-zoom a {
+  color: #334155 !important;
+}
+
+@keyframes camera-beacon {
+  0% { transform: scale(0.85); opacity: 0.8; }
+  100% { transform: scale(1.55); opacity: 0; }
+}
+
 .leaflet-popup-content-wrapper {
   background: #ffffff;
   color: #0f172a;
@@ -108,3 +254,4 @@
   pointer-events: none;
   opacity: 0.35;
 }
+
